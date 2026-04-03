@@ -1,5 +1,6 @@
 import pygame
 import sys
+from validator import Validator
 
 
 def main():
@@ -56,7 +57,42 @@ def handle_events(paused):
             if event.key == pygame.K_r:
                 pass # TODO: reset both simulations
     return paused
+    
+class Simulation:
+    def __init__(self, f=1):
+        self.f = f
+        self.n = 3*f + 1
+        self.current_round = 0
+        self.shared_chain = {}      # single shared chain
+        self.validators = [Validator(i, f) for i in range(self.n)]
 
+    # Progresses 1 round (when we do this in pygame we would call this at some interval)
+    def tick(self):
+        # Each validator proposes a vertex
+        for v in self.validators:
+            vertex = v.propose(self.current_round, self.shared_chain)
+        
+        # num_approvals = 0
+        # for v in self.validators:
+            if v.validate(vertex, self.shared_chain):
+                self.shared_chain[vertex.vertex_id] = vertex
 
+        # Each validator tries to commit older rounds
+        for v in self.validators:
+            v.try_commit(self.current_round, self.shared_chain)
+
+        self.current_round += 1
+        
 if __name__ == "__main__":
-    main()
+    # NEED TO READD THE PYGAME MAIN STUFF
+    sim = Simulation(f=1)
+
+    for round_num in range(11):     # 10 simulated roundss
+        sim.tick()
+        print(f"Round {sim.current_round - 1}: "
+            f"{len(sim.shared_chain)} total vertices, ")
+
+    print("Final total order (V0):", sim.validators[0].total_order)
+    print("All validators agree:", all(
+        v.total_order == sim.validators[0].total_order for v in sim.validators
+    ))
