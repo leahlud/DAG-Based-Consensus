@@ -39,7 +39,8 @@ func (d *DAG) Contains(round, author int) bool {
 	return d.blocks[round] != nil && d.blocks[round][author] != nil
 }
 
-// GetCertificate returns the certificate for a given round and author
+// GetCertificate returns the certificate for a given round and author.
+// The second return value is false if no certificate exists.
 func (d *DAG) GetCertificate(round, author int) (*Certificate, bool) {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
@@ -59,7 +60,8 @@ func (d *DAG) CountAtRound(round int) int {
 	return len(d.blocks[round])
 }
 
-// GetCertifiedAtRound returns all certified blocks at a given round
+// GetCertifiedAtRound returns all certified blocks at a given round.
+// Used by validators to collect parent references when proposing.
 func (d *DAG) GetCertifiedAtRound(round int) []*Certificate {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
@@ -71,6 +73,7 @@ func (d *DAG) GetCertifiedAtRound(round int) []*Certificate {
 	return certs
 }
 
+// Print displays the DAG state for a given validator, organized by round
 func (d *DAG) Print(validatorID int) {
 	d.mu.RLock()
 	defer d.mu.RUnlock()

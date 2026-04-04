@@ -23,7 +23,7 @@ func main() {
 	net.Register(validators)
 
 	// for testing
-	fmt.Printf("Validators: %d, Byzantine: %d, Rounds: %d, Round time: %dms\n", n, f, *totalRounds, *roundTimeMs)
+	fmt.Println("=== Setup ===")
 	for _, v := range validators {
 		if v.Byzantine {
 			fmt.Printf("V%d (byzantine)\n", v.ID)
@@ -48,8 +48,6 @@ func main() {
 
 func runSimulation(validators []*simulation.Validator, totalRounds, roundTimeMs int) {
 	for round := 1; round <= totalRounds; round++ {
-		fmt.Printf("--- Round %d ---\n", round)
-
 		for _, v := range validators {
 			v.Propose(round)
 		}

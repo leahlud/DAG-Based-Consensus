@@ -2,7 +2,6 @@ package simulation
 
 import (
 	"context"
-	"fmt"
 )
 
 type Validator struct {
@@ -12,7 +11,7 @@ type Validator struct {
 	Inbox     chan Message
 	dag       *DAG
 	net       *Network
-	votes     map[BlockID]int
+	votes     map[BlockID]int // tracks vote count per block for certification
 }
 
 func NewValidator(id, f int, isByzantine bool, net *Network) *Validator {
@@ -27,10 +26,13 @@ func NewValidator(id, f int, isByzantine bool, net *Network) *Validator {
 	}
 }
 
+// PrintDAG prints the validator's local DAG state
 func (v *Validator) PrintDAG() {
 	v.dag.Print(v.ID)
 }
 
+// Listen runs the validator's message loop, handling incoming messages
+// until the context is cancelled
 func (v *Validator) Listen(ctx context.Context) {
 	for {
 		select {
@@ -42,9 +44,10 @@ func (v *Validator) Listen(ctx context.Context) {
 	}
 }
 
+// Propose creates a block for the given round and broadcasts it to all peers.
+// Byzantine validators are silent and do not propose.
 func (v *Validator) Propose(round int) {
 	if v.Byzantine {
-		fmt.Printf("  [V%d] (byzantine) silent this round\n", v.ID)
 		return
 	}
 
@@ -55,8 +58,6 @@ func (v *Validator) Propose(round int) {
 		Parents: v.collectParents(round),
 	}
 
-	fmt.Printf("  [V%d] proposing %s with %d parents\n", v.ID, block.GetID(), len(block.Parents))
-
 	v.net.Broadcast(v.ID, Message{
 		Type:    MsgProposal,
 		From:    v.ID,
@@ -64,11 +65,11 @@ func (v *Validator) Propose(round int) {
 	})
 }
 
+// Handle processes an incoming message based on its type
 func (v *Validator) Handle(msg Message) {
 	switch msg.Type {
 	case MsgProposal:
 		block := msg.Payload.(Block)
-		fmt.Printf("  [V%d] received proposal %s\n", v.ID, block.GetID())
 
 		// send vote back to proposer
 		v.net.Send(v.ID, block.Author, Message{
@@ -80,27 +81,30 @@ func (v *Validator) Handle(msg Message) {
 	case MsgVote:
 		blockID := msg.Payload.(BlockID)
 		v.votes[blockID]++
-		fmt.Printf("  [V%d] received vote for %s (%d/%d)\n", v.ID, blockID, v.votes[blockID], 2*v.F+1)
 
+		// certify the block once 2f+1 votes are received
 		if v.votes[blockID] == 2*v.F+1 {
 			v.certify(blockID)
 		}
 
 	case MsgCertificate:
+		// add the certified block to the local DAG
 		cert := msg.Payload.(Certificate)
-		fmt.Printf("  [V%d] received certificate %s\n", v.ID, cert.Block.GetID())
 		v.dag.Add(&cert)
 	}
 }
 
+// certify creates a certificate for a block that has received 2f+1 votes,
+// adds it to the local DAG, and broadcasts it to all peers
 func (v *Validator) certify(id BlockID) {
 	round, author := parseBlockID(id)
 	cert := Certificate{
 		Block: Block{Round: round, Author: author, TxCount: 10},
 		Votes: 2*v.F + 1,
 	}
+
 	v.dag.Add(&cert)
-	fmt.Printf("  [V%d] certified %s\n", v.ID, id)
+
 	v.net.Broadcast(v.ID, Message{
 		Type:    MsgCertificate,
 		From:    v.ID,
@@ -108,6 +112,8 @@ func (v *Validator) certify(id BlockID) {
 	})
 }
 
+// collectParents returns the BlockIDs of all certified blocks from the previous
+// round to be used as parent references in a new block proposal
 func (v *Validator) collectParents(round int) []BlockID {
 	if round <= 1 {
 		return []BlockID{}
