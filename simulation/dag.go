@@ -1,6 +1,9 @@
 package simulation
 
-import "sync"
+import (
+	"fmt"
+	"sync"
+)
 
 // DAG stores certified blocks organized by round and validator.
 // Each validator owns its own DAG instance, so two validators
@@ -66,4 +69,18 @@ func (d *DAG) GetCertifiedAtRound(round int) []*Certificate {
 		certs = append(certs, cert)
 	}
 	return certs
+}
+
+func (d *DAG) Print(validatorID int) {
+	d.mu.RLock()
+	defer d.mu.RUnlock()
+
+	fmt.Printf("  [V%d] DAG:\n", validatorID)
+	for round := 1; round <= len(d.blocks); round++ {
+		fmt.Printf("    Round %d: ", round)
+		for author, cert := range d.blocks[round] {
+			fmt.Printf("r%d-v%d(%d votes) ", round, author, cert.Votes)
+		}
+		fmt.Println()
+	}
 }

@@ -2,6 +2,8 @@ package simulation
 
 import (
 	"fmt"
+	"strconv"
+	"strings"
 )
 
 // A BlockID is a human readable unique identifier for a block
@@ -26,4 +28,14 @@ type Certificate struct {
 // GetID returns the deterministic BlockID for a block (i.e. "r2-v1")
 func (b Block) GetID() BlockID {
 	return BlockID(fmt.Sprintf("r%d-v%d", b.Round, b.Author))
+}
+
+func parseBlockID(id BlockID) (round int, author int) {
+	parts := strings.Split(string(id), "-")
+	if len(parts) != 2 {
+		return 0, 0
+	}
+	round, _ = strconv.Atoi(strings.TrimPrefix(parts[0], "r"))
+	author, _ = strconv.Atoi(strings.TrimPrefix(parts[1], "v"))
+	return round, author
 }

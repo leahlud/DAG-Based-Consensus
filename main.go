@@ -39,6 +39,11 @@ func main() {
 
 	// start the consensus simulation
 	runSimulation(validators, *totalRounds, *roundTimeMs)
+
+	fmt.Println("\n=== DAG State ===")
+	for _, v := range validators {
+		v.PrintDAG()
+	}
 }
 
 func runSimulation(validators []*simulation.Validator, totalRounds, roundTimeMs int) {
@@ -51,8 +56,6 @@ func runSimulation(validators []*simulation.Validator, totalRounds, roundTimeMs 
 
 		time.Sleep(time.Duration(roundTimeMs) * time.Millisecond)
 	}
-
-	fmt.Println("Simulation complete")
 }
 
 func createValidators(n, f int, net *simulation.Network) []*simulation.Validator {

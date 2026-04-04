@@ -37,3 +37,7 @@ func (n *Network) Broadcast(from int, msg Message) {
 		}
 	}
 }
+
+func (n *Network) Send(from, to int, msg Message) {
+	n.validators[to].Inbox <- msg
+}
