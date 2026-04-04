@@ -23,7 +23,7 @@ func main() {
 	net.Register(validators)
 
 	// for testing
-	fmt.Println("=== Setup ===")
+	fmt.Println("--- Setup ---")
 	for _, v := range validators {
 		if v.Byzantine {
 			fmt.Printf("V%d (byzantine)\n", v.ID)
@@ -40,9 +40,15 @@ func main() {
 	// start the consensus simulation
 	runSimulation(validators, *totalRounds, *roundTimeMs)
 
-	fmt.Println("\n=== DAG State ===")
+	fmt.Println("\n--- DAG States ---")
 	for _, v := range validators {
 		v.PrintDAG()
+	}
+
+	fmt.Println("\n--- Total Order (V0) ---")
+	order := simulation.TotalOrder(validators[0].GetDAG())
+	for i, id := range order {
+		fmt.Printf("  %d: %s\n", i+1, id)
 	}
 }
 

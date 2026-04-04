@@ -26,6 +26,11 @@ func NewValidator(id, f int, isByzantine bool, net *Network) *Validator {
 	}
 }
 
+// GetDAG returns the validator's local DAG for external inspection
+func (v *Validator) GetDAG() *DAG {
+	return v.dag
+}
+
 // PrintDAG prints the validator's local DAG state
 func (v *Validator) PrintDAG() {
 	v.dag.Print(v.ID)
