@@ -12,10 +12,11 @@ type Validator struct {
 	dag       *DAG
 	net       *Network
 	votes     map[BlockID]int // tracks vote count per block for certification
+	sequencer *Sequencer
 }
 
 func NewValidator(id, f int, isByzantine bool, net *Network) *Validator {
-	return &Validator{
+	v := &Validator{
 		ID:        id,
 		F:         f,
 		Byzantine: isByzantine,
@@ -24,6 +25,11 @@ func NewValidator(id, f int, isByzantine bool, net *Network) *Validator {
 		net:       net,
 		votes:     make(map[BlockID]int),
 	}
+	v.sequencer = NewSequencer(f, func(id BlockID) {
+        _ = id
+    })
+
+	return v
 }
 
 // GetDAG returns the validator's local DAG for external inspection
@@ -109,6 +115,7 @@ func (v *Validator) certify(id BlockID) {
 	}
 
 	v.dag.Add(&cert)
+	v.sequencer.TryAdvance(v.dag)
 
 	v.net.Broadcast(v.ID, Message{
 		Type:    MsgCertificate,
