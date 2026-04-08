@@ -52,6 +52,14 @@ func (d *DAG) GetCertificate(round, author int) (*Certificate, bool) {
 	return cert, ok
 }
 
+// CountRounds returns the total number of rounds in the DAG
+func (d *DAG) CountRounds() int {
+	d.mu.RLock()
+	defer d.mu.RUnlock()
+
+	return len(d.blocks)
+}
+
 // CountAtRound returns how many certified blocks exist at a given round
 func (d *DAG) CountAtRound(round int) int {
 	d.mu.RLock()

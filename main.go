@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"dag-based-consensus/export"
 	"dag-based-consensus/simulation"
 	"flag"
 	"fmt"
@@ -40,16 +41,7 @@ func main() {
 	// start the consensus simulation
 	runSimulation(validators, *totalRounds, *roundTimeMs)
 
-	fmt.Println("\n--- DAG States ---")
-	for _, v := range validators {
-		v.PrintDAG()
-	}
-
-	fmt.Println("\n--- Total Order (V0) ---")
-	order := simulation.TotalOrder(validators[0].GetDAG())
-	for i, id := range order {
-		fmt.Printf("  %d: %s\n", i+1, id)
-	}
+	exportTotalOrdering(validators)
 }
 
 func runSimulation(validators []*simulation.Validator, totalRounds, roundTimeMs int) {
@@ -74,4 +66,25 @@ func startValidators(ctx context.Context, validators []*simulation.Validator) {
 	for _, v := range validators {
 		go v.Listen(ctx)
 	}
+}
+
+func exportTotalOrdering(validators []*simulation.Validator) {
+	fmt.Println("\n--- DAG States ---")
+	for _, v := range validators {
+		v.PrintDAG()
+	}
+
+	fmt.Println("\n--- Total Order (V0) ---")
+	order := simulation.TotalOrder(validators[0].GetDAG())
+	orderStrings := make([]string, len(order))
+	for i, id := range order {
+		orderStrings[i] = string(id)
+	}
+
+	// export to CSV
+	blocks := validators[0].ExportDAG()
+	export.WriteEdgesCSV(blocks, "edges.csv")
+	export.WriteOrderCSV(orderStrings, "order.csv")
+	fmt.Println("\nExported to edges.csv and order.csv")
+
 }

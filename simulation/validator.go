@@ -2,32 +2,35 @@ package simulation
 
 import (
 	"context"
+	"dag-based-consensus/export"
 )
 
 type Validator struct {
-	ID        int
-	F         int
-	Byzantine bool
-	Inbox     chan Message
-	dag       *DAG
-	net       *Network
-	votes     map[BlockID]int // tracks vote count per block for certification
-	sequencer *Sequencer
+	ID         int
+	F          int
+	Byzantine  bool
+	Inbox      chan Message
+	dag        *DAG
+	net        *Network
+	votes      map[BlockID]int   // tracks vote count per block for certification
+	blockCache map[BlockID]Block // cache proposals so parents are preserved
+	sequencer  *Sequencer
 }
 
 func NewValidator(id, f int, isByzantine bool, net *Network) *Validator {
 	v := &Validator{
-		ID:        id,
-		F:         f,
-		Byzantine: isByzantine,
-		Inbox:     make(chan Message, 100),
-		dag:       NewDAG(),
-		net:       net,
-		votes:     make(map[BlockID]int),
+		ID:         id,
+		F:          f,
+		Byzantine:  isByzantine,
+		Inbox:      make(chan Message, 100),
+		dag:        NewDAG(),
+		net:        net,
+		votes:      make(map[BlockID]int),
+		blockCache: make(map[BlockID]Block),
 	}
 	v.sequencer = NewSequencer(f, func(id BlockID) {
-        _ = id
-    })
+		_ = id
+	})
 
 	return v
 }
@@ -40,6 +43,27 @@ func (v *Validator) GetDAG() *DAG {
 // PrintDAG prints the validator's local DAG state
 func (v *Validator) PrintDAG() {
 	v.dag.Print(v.ID)
+}
+
+// ExportDAG converts the validator's DAG to a JSON serializable format
+func (v *Validator) ExportDAG() []export.ExportBlock {
+	blocks := []export.ExportBlock{}
+	for round := 1; round <= v.dag.CountRounds(); round++ {
+		for _, cert := range v.dag.GetCertifiedAtRound(round) {
+			parents := make([]string, len(cert.Block.Parents))
+			for i, p := range cert.Block.Parents {
+				parents[i] = string(p)
+			}
+			blocks = append(blocks, export.ExportBlock{
+				ID:      string(cert.Block.GetID()),
+				Round:   cert.Block.Round,
+				Author:  cert.Block.Author,
+				Parents: parents,
+				Votes:   cert.Votes,
+			})
+		}
+	}
+	return blocks
 }
 
 // Listen runs the validator's message loop, handling incoming messages
@@ -81,6 +105,7 @@ func (v *Validator) Handle(msg Message) {
 	switch msg.Type {
 	case MsgProposal:
 		block := msg.Payload.(Block)
+		v.blockCache[block.GetID()] = block
 
 		// send vote back to proposer
 		v.net.Send(v.ID, block.Author, Message{
@@ -108,9 +133,15 @@ func (v *Validator) Handle(msg Message) {
 // certify creates a certificate for a block that has received 2f+1 votes,
 // adds it to the local DAG, and broadcasts it to all peers
 func (v *Validator) certify(id BlockID) {
-	round, author := parseBlockID(id)
+	block, ok := v.blockCache[id]
+	if !ok {
+		// fallback if we certified our own block (we never received it as a proposal)
+		round, author := parseBlockID(id)
+		block = Block{Round: round, Author: author, TxCount: 10, Parents: v.collectParents(round)}
+	}
+
 	cert := Certificate{
-		Block: Block{Round: round, Author: author, TxCount: 10},
+		Block: block,
 		Votes: 2*v.F + 1,
 	}
 
