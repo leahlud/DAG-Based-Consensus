@@ -47,6 +47,7 @@ func main() {
 func runSimulation(validators []*simulation.Validator, totalRounds, roundTimeMs int) {
 	for round := 1; round <= totalRounds; round++ {
 		for _, v := range validators {
+			v.ByzantineHistory[round] = v.Byzantine
 			v.Propose(round)
 		}
 

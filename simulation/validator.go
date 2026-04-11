@@ -15,6 +15,7 @@ type Validator struct {
 	votes      map[BlockID]int   // tracks vote count per block for certification
 	blockCache map[BlockID]Block // cache proposals so parents are preserved
 	sequencer  *Sequencer
+	ByzantineHistory map[int]bool // tracks whether the validator is Byzantine or not per round
 }
 
 func NewValidator(id, f int, isByzantine bool, net *Network) *Validator {
@@ -31,6 +32,7 @@ func NewValidator(id, f int, isByzantine bool, net *Network) *Validator {
 	v.sequencer = NewSequencer(f, func(id BlockID) {
 		_ = id
 	})
+	v.ByzantineHistory = make(map[int]bool)
 
 	return v
 }
