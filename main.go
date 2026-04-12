@@ -41,7 +41,7 @@ func main() {
 	// start the consensus simulation
 	runSimulation(validators, *totalRounds, *roundTimeMs)
 
-	exportTotalOrdering(validators)
+	exportTotalOrdering(validators, *totalRounds)
 }
 
 func runSimulation(validators []*simulation.Validator, totalRounds, roundTimeMs int) {
@@ -69,10 +69,22 @@ func startValidators(ctx context.Context, validators []*simulation.Validator) {
 	}
 }
 
-func exportTotalOrdering(validators []*simulation.Validator) {
+func exportTotalOrdering(validators []*simulation.Validator, totalRounds int) {
 	fmt.Println("\n--- DAG States ---")
 	for _, v := range validators {
 		v.PrintDAG()
+	}
+
+	// takes validators' Byzantine history and makes it into a data type that exporter uses to create its CSV
+	var records []export.ByzantineRecord
+	for _, v := range validators {
+		for round := 1; round <= totalRounds; round++ {
+			records = append(records, export.ByzantineRecord{
+				Round:     round,
+				Validator: v.ID,
+				Byzantine: v.ByzantineHistory[round],
+			})
+		}
 	}
 
 	fmt.Println("\n--- Total Order (V0) ---")
@@ -86,6 +98,7 @@ func exportTotalOrdering(validators []*simulation.Validator) {
 	blocks := validators[0].ExportDAG()
 	export.WriteEdgesCSV(blocks, "edges.csv")
 	export.WriteOrderCSV(orderStrings, "order.csv")
-	fmt.Println("\nExported to edges.csv and order.csv")
+	export.WriteByzantineCSV(records, "byzantine.csv")
+	fmt.Println("\nExported to edges.csv, order.csv, and byzantine.csv")
 
 }
