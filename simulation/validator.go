@@ -84,10 +84,6 @@ func (v *Validator) Listen(ctx context.Context) {
 // Propose creates a block for the given round and broadcasts it to all peers.
 // Byzantine validators are silent and do not propose.
 func (v *Validator) Propose(round int) {
-	if v.Byzantine {
-		return
-	}
-
 	block := Block{
 		Round:   round,
 		Author:  v.ID,

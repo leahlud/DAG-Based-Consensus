@@ -6,6 +6,7 @@ import (
 	"dag-based-consensus/simulation"
 	"flag"
 	"fmt"
+	"math/rand"
 	"time"
 )
 
@@ -14,6 +15,7 @@ func main() {
 	numByzantine := flag.Int("f", 1, "max byzantine faults tolerated")
 	totalRounds := flag.Int("rounds", 10, "number of rounds to simulate")
 	roundTimeMs := flag.Int("delay", 100, "round duration in ms")
+	proposeProb := flag.Float64("p", 1.0, "probability a validator proposes in a round")
 	flag.Parse()
 
 	// compute number of validators and initialize them
@@ -39,16 +41,19 @@ func main() {
 	startValidators(ctx, validators)
 
 	// start the consensus simulation
-	runSimulation(validators, *totalRounds, *roundTimeMs)
+	runSimulation(validators, *totalRounds, *roundTimeMs, *proposeProb)
 
 	exportTotalOrdering(validators, *totalRounds)
 }
 
-func runSimulation(validators []*simulation.Validator, totalRounds, roundTimeMs int) {
+func runSimulation(validators []*simulation.Validator, totalRounds, roundTimeMs int, proposeProb float64) {
 	for round := 1; round <= totalRounds; round++ {
 		for _, v := range validators {
 			v.ByzantineHistory[round] = v.Byzantine
-			v.Propose(round)
+
+			if rand.Float64() < proposeProb {
+				v.Propose(round)
+			}
 		}
 
 		time.Sleep(time.Duration(roundTimeMs) * time.Millisecond)
