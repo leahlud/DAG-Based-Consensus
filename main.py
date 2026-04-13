@@ -10,12 +10,15 @@ COLORS = {
     'pending': '#B4B2A9',
     'pendingBorder': '#5F5E5A',
     'shading': '#E1F5EE',
-    'arrows': "#9FDFE1"
+    'arrows': "#9FDFE1",
+    'byzantine': '#7D7D7D',
+    'honest': "#2ECC71"
 }
 
 # load graph data from CSVs 
 edges_df = pd.read_csv("edges.csv")
 order_df = pd.read_csv("order.csv")
+byz_df = pd.read_csv("byzantine.csv")
 
 # parse user args
 parser = argparse.ArgumentParser(description="Visualize DAG-based consensus.")
@@ -33,7 +36,8 @@ def parse_node(name):
 # collect nodes and dimensions
 all_nodes  = sorted(set(pd.concat([edges_df["source"], edges_df["target"]]).unique()), key=parse_node)
 rounds     = sorted(set(parse_node(n)[0] for n in all_nodes))
-validators = sorted(set(parse_node(n)[1] for n in all_nodes))
+# validators = sorted(set(parse_node(n)[1] for n in all_nodes))
+validators = byz_df['validator_id'].unique()
 n_vals     = len(validators)
  
 # quorum status per round (True = enough certified blocks to commit)
@@ -43,9 +47,10 @@ round_commits = {r: round_count[r] >= QUORUM for r in rounds}
 # total ordering from CSV
 order_map = dict(zip(order_df["block_id"], order_df["position"]))
  
-# grid positions: x = round, y = validator (v0 at top)
+# grid positions: x = round, y = validator (v0 at top), y_offset = where the validator info is located
 X_STEP = 3
 Y_STEP = 1
+VALIDATOR_Y_OFFSET = 0.6
  
 def grid_pos(node):
     r, v = parse_node(node)
@@ -59,7 +64,11 @@ for _, row in edges_df.iterrows():
     G.add_edge(row["source"], row["target"])
  
 # plot
-fig, ax = plt.subplots(figsize=(3 + len(rounds) * 3, 2 + n_vals * 1.2))
+fig, (ax, ax2) = plt.subplots(
+    2, 1,
+    figsize=(3 + len(rounds) * 3, 3 + n_vals * 1.5),
+    gridspec_kw={'height_ratios': [4, 1]}
+)
 fig.patch.set_facecolor("#f8f8f6")
 ax.set_facecolor("#f8f8f6")
  
@@ -95,6 +104,52 @@ for node in all_nodes:
     ax.add_patch(plt.Circle((x, y), NODE_R, color=color, ec=border, lw=1.5, zorder=3))
  
     ax.text(x, y, node, ha="center", va="center", fontsize=6.5, fontweight="bold", color="white", zorder=4)
+
+# validators
+ax2.set_facecolor("#f8f8f6")
+CELL_W = X_STEP
+CELL_H = 0.8
+
+for r in rounds:
+    for v in validators:
+        x = (r - 1) * X_STEP
+        y = -v
+        
+        rows = byz_df[
+            (byz_df['round'] == r) & (byz_df['validator_id'] == v)
+        ]
+
+        is_byzantine = False
+        if not rows.empty:
+            is_byzantine = str(rows.iloc[0]['byzantine']).lower() == "true"
+
+        color = COLORS['byzantine'] if is_byzantine else COLORS['honest']
+
+        rect = plt.Rectangle(
+            (x - 0.5, y - 0.4),
+            1.0,
+            CELL_H,
+            color=color,
+            ec="#444",
+            lw=1
+        )
+        ax2.add_patch(rect)
+
+        ax2.text(x, y, f"V{v}", ha="center", va="center", fontsize=7, color="white")
+
+ax2.set_xlim(-1.5, (max(rounds) - 1) * X_STEP + 1.5)
+ax2.set_ylim(-len(validators), 1)
+
+ax2.set_xticks([(r - 1) * X_STEP for r in rounds])
+ax2.set_xticklabels([f"R{r}" for r in rounds], fontsize=8)
+
+ax2.set_yticks([-v for v in validators])
+ax2.set_yticklabels([f"V{v}" for v in validators], fontsize=8)
+
+ax2.set_title("Validator Byzantine Status", fontsize=10)
+ax2.grid(True, axis='x', linestyle='--', alpha=0.3)
+
+ax2.set_aspect("auto")
  
 # quorum indicator below each round column
 for r in rounds:
@@ -123,6 +178,11 @@ ax.legend(handles=[
     mpatches.Patch(color=COLORS['pending'], label="Pending block"),
     mpatches.Patch(color=COLORS['shading'], label="Committed round"),
 ], loc="lower right", fontsize=8, framealpha=0.9)
+
+ax2.legend(handles=[
+    mpatches.Patch(color="#2ECC71", label="Honest validator"),
+    mpatches.Patch(color="#7D7D7D", label="Byzantine validator"),
+], loc="upper left", bbox_to_anchor=(0.9, 1.3), borderaxespad=0, fontsize=8, framealpha=0.9)
  
 ax.set_xlim(-1.5, (max(rounds) - 1) * X_STEP + 1.5)
 ax.set_ylim(-n_vals * Y_STEP - 1.0, 1.3)
