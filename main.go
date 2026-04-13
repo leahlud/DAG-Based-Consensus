@@ -10,6 +10,9 @@ import (
 	"time"
 )
 
+var f = 1       // num byzantine
+var n = 3*f + 1 // total number of validators
+
 func main() {
 	// parse user arguments
 	numByzantine := flag.Int("f", 1, "max byzantine faults tolerated")
@@ -19,10 +22,10 @@ func main() {
 	flag.Parse()
 
 	// compute number of validators and initialize them
-	f := *numByzantine
-	n := 3*f + 1
+	f = *numByzantine
+	n = 3*f + 1
 	net := simulation.NewNetwork()
-	validators := createValidators(n, f, net)
+	validators := createValidators(net)
 	net.Register(validators)
 
 	// for testing
@@ -46,12 +49,22 @@ func main() {
 	exportTotalOrdering(validators, *totalRounds)
 }
 
+func randomFaultySet() map[int]bool {
+	faulty := make(map[int]bool, f)
+	for _, i := range rand.Perm(n)[:f] {
+		faulty[i] = true
+	}
+	return faulty
+}
+
 func runSimulation(validators []*simulation.Validator, totalRounds, roundTimeMs int, proposeProb float64) {
 	for round := 1; round <= totalRounds; round++ {
-		for _, v := range validators {
-			v.ByzantineHistory[round] = v.Byzantine
+		faultySet := randomFaultySet()
+		for i, v := range validators {
+			v.Byzantine = faultySet[i]
+			v.ByzantineHistory[round] = faultySet[i]
 
-			if rand.Float64() < proposeProb {
+			if rand.Float64() < proposeProb && !v.Byzantine {
 				v.Propose(round)
 			}
 		}
@@ -60,10 +73,10 @@ func runSimulation(validators []*simulation.Validator, totalRounds, roundTimeMs 
 	}
 }
 
-func createValidators(n, f int, net *simulation.Network) []*simulation.Validator {
+func createValidators(net *simulation.Network) []*simulation.Validator {
 	validators := make([]*simulation.Validator, n)
 	for i := range validators {
-		validators[i] = simulation.NewValidator(i, f, i >= n-f, net)
+		validators[i] = simulation.NewValidator(i, f, false, net)
 	}
 	return validators
 }
