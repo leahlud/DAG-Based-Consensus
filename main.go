@@ -64,7 +64,7 @@ func runSimulation(validators []*simulation.Validator, totalRounds, roundTimeMs 
 			v.Byzantine = faultySet[i]
 			v.ByzantineHistory[round] = faultySet[i]
 
-			if rand.Float64() < proposeProb && !v.Byzantine {
+			if rand.Float64() < proposeProb {
 				v.Propose(round)
 			}
 		}

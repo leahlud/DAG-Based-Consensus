@@ -16,6 +16,7 @@ type Block struct {
 	Author  int
 	TxCount int
 	Parents []BlockID // references to certified blocks from round-1
+	Suspicious bool			// if made by a Byzantine one
 }
 
 // Certificate represents a block that has received 2f+1 votes

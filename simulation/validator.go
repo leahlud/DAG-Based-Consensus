@@ -89,6 +89,7 @@ func (v *Validator) Propose(round int) {
 		Author:  v.ID,
 		TxCount: 10,
 		Parents: v.collectParents(round),
+		Suspicious: v.Byzantine,
 	}
 
 	v.net.Broadcast(v.ID, Message{
@@ -109,16 +110,19 @@ func (v *Validator) Handle(msg Message) {
 		v.net.Send(v.ID, block.Author, Message{
 			Type:    MsgVote,
 			From:    v.ID,
-			Payload: block.GetID(),
+			Payload: block,
 		})
 
 	case MsgVote:
-		blockID := msg.Payload.(BlockID)
-		v.votes[blockID]++
+		block := msg.Payload.(Block)
+		blockID := block.GetID()
+		if !block.Suspicious {
+			v.votes[blockID]++
 
-		// certify the block once 2f+1 votes are received
-		if v.votes[blockID] == 2*v.F+1 {
-			v.certify(blockID)
+			// certify the block once 2f+1 votes are received
+			if v.votes[blockID] == 2*v.F+1 {
+				v.certify(blockID)
+			}
 		}
 
 	case MsgCertificate:
