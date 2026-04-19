@@ -1,6 +1,7 @@
 byzantine.csv
 edges.csv
 order.csv
+rejected.csv
 dag_visualization.png
 
 # ==================

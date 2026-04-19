@@ -84,6 +84,17 @@ func WriteByzantineCSV(records []ByzantineRecord, path string) error {
 	return nil
 }
 
+func WriteRejectedCSV(ids []string, path string) {
+    f, _ := os.Create(path)
+    defer f.Close()
+    w := csv.NewWriter(f)
+    w.Write([]string{"block_id"})
+    for _, id := range ids {
+        w.Write([]string{id})
+    }
+    w.Flush()
+}
+
 func itoa(i int) string {
 	return fmt.Sprintf("%d", i)
 }

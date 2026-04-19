@@ -16,6 +16,7 @@ type Validator struct {
 	blockCache map[BlockID]Block // cache proposals so parents are preserved
 	sequencer  *Sequencer
 	ByzantineHistory map[int]bool // tracks whether the validator is Byzantine or not per round
+	RejectedBlocks map[BlockID]bool
 }
 
 func NewValidator(id, f int, isByzantine bool, net *Network) *Validator {
@@ -28,6 +29,7 @@ func NewValidator(id, f int, isByzantine bool, net *Network) *Validator {
 		net:        net,
 		votes:      make(map[BlockID]int),
 		blockCache: make(map[BlockID]Block),
+		RejectedBlocks: make(map[BlockID]bool),
 	}
 	v.sequencer = NewSequencer(f, func(id BlockID) {
 		_ = id
@@ -123,6 +125,8 @@ func (v *Validator) Handle(msg Message) {
 			if v.votes[blockID] == 2*v.F+1 {
 				v.certify(blockID)
 			}
+		} else {
+			v.RejectedBlocks[blockID] = true
 		}
 
 	case MsgCertificate:

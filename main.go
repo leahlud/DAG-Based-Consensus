@@ -105,6 +105,19 @@ func exportTotalOrdering(validators []*simulation.Validator, totalRounds int) {
 		}
 	}
 
+	// Collect rejected blocks from all validators (union across validators)
+	rejectedSet := make(map[string]bool)
+	for _, v := range validators {
+		for id := range v.RejectedBlocks {
+			rejectedSet[string(id)] = true
+		}
+	}
+	rejectedList := make([]string, 0, len(rejectedSet))
+	for id := range rejectedSet {
+		rejectedList = append(rejectedList, id)
+	}
+	export.WriteRejectedCSV(rejectedList, "rejected.csv")
+
 	fmt.Println("\n--- Total Order (V0) ---")
 	order := simulation.TotalOrder(validators[0].GetDAG())
 	orderStrings := make([]string, len(order))
@@ -117,6 +130,6 @@ func exportTotalOrdering(validators []*simulation.Validator, totalRounds int) {
 	export.WriteEdgesCSV(blocks, "edges.csv")
 	export.WriteOrderCSV(orderStrings, "order.csv")
 	export.WriteByzantineCSV(records, "byzantine.csv")
-	fmt.Println("\nExported to edges.csv, order.csv, and byzantine.csv")
+	fmt.Println("\nExported to edges.csv, order.csv, byzantine.csv, and rejected.csv")
 
 }
