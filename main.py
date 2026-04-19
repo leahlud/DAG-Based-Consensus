@@ -19,6 +19,8 @@ COLORS = {
     'byzantineBorder':'#5F5E5A',
     'honest':         "#2ECC71",
     'honestBorder':   "#1C8B4A",
+    'rejected':       "#CCCCCC",
+    'rejectedBorder': "#888888",
 }
 
 # --- args ---
@@ -33,6 +35,7 @@ QUORUM = 2 * F + 1
 edges_df = pd.read_csv("edges.csv")
 order_df = pd.read_csv("order.csv")
 byz_df   = pd.read_csv("byzantine.csv")
+rejected_df = pd.read_csv("rejected.csv")
 
 # --- parsing ---
 def parse_block_name(name):
@@ -43,11 +46,16 @@ def grid_pos(block):
     r, v = parse_block_name(block)
     return ((r - 1) * X_STEP, -v * Y_STEP)
 
-all_blocks = sorted(set(pd.concat([edges_df["source"], edges_df["target"]]).unique()), key=parse_block_name)
-rounds     = sorted(set(parse_block_name(b)[0] for b in all_blocks))
+
+rejected_set = set(rejected_df["block_id"].tolist())
+all_blocks = sorted(
+    set(pd.concat([edges_df["source"], edges_df["target"]]).unique()) | rejected_set,
+    key=parse_block_name
+)
+rounds = sorted(set(parse_block_name(b)[0] for b in all_blocks))
 validators = sorted(byz_df['validator_id'].unique())
 n_vals     = len(validators)
-pos        = {b: grid_pos(b) for b in all_blocks}
+pos    = {b: grid_pos(b) for b in all_blocks}
 
 G = nx.DiGraph()
 for _, row in edges_df.iterrows():
@@ -77,8 +85,13 @@ def draw_edges(ax):
 def draw_blocks(ax):
     for block in all_blocks:
         x, y = pos[block]
-        ax.add_patch(plt.Circle((x, y), NODE_R, color=COLORS['committed'],
-                                ec=COLORS['committedBorder'], lw=1.5, zorder=3))
+        if block in rejected_set:
+            ax.add_patch(plt.Circle((x, y), NODE_R, color=COLORS['rejected'],
+                                    ec=COLORS['rejectedBorder'], lw=1.5, linestyle="dashed", zorder=3))
+        else:
+            ax.add_patch(plt.Circle((x, y), NODE_R, color=COLORS['committed'],
+                                    ec=COLORS['committedBorder'], lw=1.5, zorder=3))
+            
         ax.text(x, y, block, ha="center", va="center",
                 fontsize=6.5, fontweight="bold", color="white", zorder=4)
 
@@ -128,6 +141,7 @@ ax2.legend(handles=[
     mpatches.Patch(color=COLORS['committed'], label="Committed block"),
     mpatches.Patch(color=COLORS['honest'],    label="Honest validator"),
     mpatches.Patch(color=COLORS['byzantine'], label="Byzantine validator"),
+    mpatches.Patch(color=COLORS['rejected'],  label="Rejected block"),
 ], loc="lower center", bbox_to_anchor=(0.5, -0.35), ncol=3, fontsize=8, framealpha=0.9)
 
 # bottom plot
