@@ -16,6 +16,7 @@ var n = 3*f + 1 // total number of validators
 func main() {
 	// parse user arguments
 	numByzantine := flag.Int("f", 1, "max byzantine faults tolerated")
+	numValidators := flag.Int("n", 4, "number of validators")
 	totalRounds := flag.Int("rounds", 10, "number of rounds to simulate")
 	roundTimeMs := flag.Int("delay", 100, "round duration in ms")
 	proposeProb := flag.Float64("p", 1.0, "probability a validator proposes in a round")
@@ -23,7 +24,7 @@ func main() {
 
 	// compute number of validators and initialize them
 	f = *numByzantine
-	n = 3*f + 1
+	n = *numValidators
 	net := simulation.NewNetwork()
 	validators := createValidators(net)
 	net.Register(validators)
