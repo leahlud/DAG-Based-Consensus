@@ -48,6 +48,7 @@ func main() {
 	runSimulation(validators, *totalRounds, *roundTimeMs, *proposeProb)
 
 	exportTotalOrdering(validators, *totalRounds)
+	printThroughputComparison(validators, *totalRounds, *roundTimeMs)
 }
 
 func randomFaultySet() map[int]bool {
@@ -133,4 +134,24 @@ func exportTotalOrdering(validators []*simulation.Validator, totalRounds int) {
 	export.WriteByzantineCSV(records, "byzantine.csv")
 	fmt.Println("\nExported to edges.csv, order.csv, byzantine.csv, and rejected.csv")
 
+}
+
+func printThroughputComparison(validators []*simulation.Validator, totalRounds, roundTimeMs int) {
+    n := len(validators)
+    totalTimeDAG := float64(totalRounds*roundTimeMs) / 1000.0
+	totalTimepBFT := float64(totalRounds*roundTimeMs*n) / 1000.0
+
+    // dag throughput has all validators propose each round
+    numBlocks := totalRounds * n
+    dagThroughput := float64(numBlocks) / totalTimeDAG
+
+    // pbft throughput has one leader propose a block each round w/ same round delay
+    pbftThroughput := float64(numBlocks) / totalTimepBFT
+
+    fmt.Println("\n--- Throughput Comparison ---")
+    fmt.Printf("Total time for DAG:        %.2fs (%d rounds x %d ms)\n", totalTimeDAG, totalRounds, roundTimeMs)
+	fmt.Printf("Total time for pBFT:        %.2fs (%d rounds x %d validators x %d ms)\n", totalTimepBFT, totalRounds, n, roundTimeMs)
+    fmt.Printf("DAG throughput:    %.0f blocks/s (%d blocks total)\n", dagThroughput, numBlocks)
+    fmt.Printf("pBFT throughput:   %.0f blocks/s (%d blocks total)\n", pbftThroughput, numBlocks)
+    fmt.Printf("DAG speedup:       %.1fx\n", dagThroughput/pbftThroughput)
 }
