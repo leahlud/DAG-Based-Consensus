@@ -17,9 +17,9 @@ type ExportBlock struct {
 
 // ExportBlock is a serializable representation of a validator in a round
 type ByzantineRecord struct {
-	Round      int
-	Validator  int
-	Byzantine  bool
+	Round     int
+	Validator int
+	Byzantine bool
 }
 
 // WriteEdgesCSV writes the DAG edges to a CSV file
@@ -85,14 +85,14 @@ func WriteByzantineCSV(records []ByzantineRecord, path string) error {
 }
 
 func WriteRejectedCSV(ids []string, path string) {
-    f, _ := os.Create(path)
-    defer f.Close()
-    w := csv.NewWriter(f)
-    w.Write([]string{"block_id"})
-    for _, id := range ids {
-        w.Write([]string{id})
-    }
-    w.Flush()
+	f, _ := os.Create(path)
+	defer f.Close()
+	w := csv.NewWriter(f)
+	w.Write([]string{"block_id"})
+	for _, id := range ids {
+		w.Write([]string{id})
+	}
+	w.Flush()
 }
 
 func itoa(i int) string {

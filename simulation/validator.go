@@ -6,29 +6,29 @@ import (
 )
 
 type Validator struct {
-	ID         int
-	F          int
-	Byzantine  bool
-	Inbox      chan Message
-	dag        *DAG
-	net        *Network
-	votes      map[BlockID]int   // tracks vote count per block for certification
-	blockCache map[BlockID]Block // cache proposals so parents are preserved
-	sequencer  *Sequencer
+	ID               int
+	F                int
+	Byzantine        bool
+	Inbox            chan Message
+	dag              *DAG
+	net              *Network
+	votes            map[BlockID]int   // tracks vote count per block for certification
+	blockCache       map[BlockID]Block // cache proposals so parents are preserved
+	sequencer        *Sequencer
 	ByzantineHistory map[int]bool // tracks whether the validator is Byzantine or not per round
-	RejectedBlocks map[BlockID]bool
+	RejectedBlocks   map[BlockID]bool
 }
 
 func NewValidator(id, f int, isByzantine bool, net *Network) *Validator {
 	v := &Validator{
-		ID:         id,
-		F:          f,
-		Byzantine:  isByzantine,
-		Inbox:      make(chan Message, 100),
-		dag:        NewDAG(),
-		net:        net,
-		votes:      make(map[BlockID]int),
-		blockCache: make(map[BlockID]Block),
+		ID:             id,
+		F:              f,
+		Byzantine:      isByzantine,
+		Inbox:          make(chan Message, 100),
+		dag:            NewDAG(),
+		net:            net,
+		votes:          make(map[BlockID]int),
+		blockCache:     make(map[BlockID]Block),
 		RejectedBlocks: make(map[BlockID]bool),
 	}
 	v.sequencer = NewSequencer(f, func(id BlockID) {
@@ -87,10 +87,10 @@ func (v *Validator) Listen(ctx context.Context) {
 // Byzantine validators are silent and do not propose.
 func (v *Validator) Propose(round int) {
 	block := Block{
-		Round:   round,
-		Author:  v.ID,
-		TxCount: 10,
-		Parents: v.collectParents(round),
+		Round:      round,
+		Author:     v.ID,
+		TxCount:    10,
+		Parents:    v.collectParents(round),
 		Suspicious: v.Byzantine,
 	}
 

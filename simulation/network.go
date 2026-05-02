@@ -1,5 +1,7 @@
 package simulation
 
+import "math/rand/v2"
+
 // MsgType identifies the kind of message being sent between validators
 type MsgType int
 
@@ -42,5 +44,8 @@ func (n *Network) Broadcast(from int, msg Message) {
 
 // Send delivers a message from one validator to a specific target
 func (n *Network) Send(from, to int, msg Message) {
+	if rand.Float64() < 0.05 {
+		return // dropped packet simulation
+	}
 	n.validators[to].Inbox <- msg
 }
