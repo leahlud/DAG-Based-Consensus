@@ -45,10 +45,10 @@ func main() {
 	startValidators(ctx, validators)
 
 	// start the consensus simulation
-	runSimulation(validators, *totalRounds, *roundTimeMs, *proposeProb)
+	proposed := runSimulation(validators, *totalRounds, *roundTimeMs, *proposeProb)
 
 	exportTotalOrdering(validators, *totalRounds)
-	printThroughputComparison(validators, *totalRounds, *roundTimeMs)
+	printThroughputComparison(proposed, *totalRounds, *roundTimeMs, len(validators))
 }
 
 func randomFaultySet() map[int]bool {
@@ -59,20 +59,22 @@ func randomFaultySet() map[int]bool {
 	return faulty
 }
 
-func runSimulation(validators []*simulation.Validator, totalRounds, roundTimeMs int, proposeProb float64) {
-	for round := 1; round <= totalRounds; round++ {
-		faultySet := randomFaultySet()
-		for i, v := range validators {
-			v.Byzantine = faultySet[i]
-			v.ByzantineHistory[round] = faultySet[i]
+func runSimulation(validators []*simulation.Validator, totalRounds, roundTimeMs int, proposeProb float64) int {
+    proposed := 0
+    for round := 1; round <= totalRounds; round++ {
+        faultySet := randomFaultySet()
+        for i, v := range validators {
+            v.Byzantine = faultySet[i]
+            v.ByzantineHistory[round] = faultySet[i]
 
-			if rand.Float64() < proposeProb {
-				v.Propose(round)
-			}
-		}
-
-		time.Sleep(time.Duration(roundTimeMs) * time.Millisecond)
-	}
+            if rand.Float64() < proposeProb {
+                v.Propose(round)
+                proposed++
+            }
+        }
+        time.Sleep(time.Duration(roundTimeMs) * time.Millisecond)
+    }
+    return proposed
 }
 
 func createValidators(net *simulation.Network) []*simulation.Validator {
@@ -136,22 +138,16 @@ func exportTotalOrdering(validators []*simulation.Validator, totalRounds int) {
 
 }
 
-func printThroughputComparison(validators []*simulation.Validator, totalRounds, roundTimeMs int) {
-	n := len(validators)
-	totalTimeDAG := float64(totalRounds*roundTimeMs) / 1000.0
-	totalTimepBFT := float64(totalRounds*roundTimeMs*n) / 1000.0
 
-	// dag throughput has all validators propose each round
-	numBlocks := totalRounds * n
-	dagThroughput := float64(numBlocks) / totalTimeDAG
+func printThroughputComparison(proposed, totalRounds, roundTimeMs, n int) {
+    totalTimeS := float64(totalRounds*roundTimeMs) / 1000.0
 
-	// pbft throughput has one leader propose a block each round w/ same round delay
-	pbftThroughput := float64(numBlocks) / totalTimepBFT
+    dagThroughput  := float64(proposed) / totalTimeS
+    pbftThroughput := float64(totalRounds) / totalTimeS  // one block per round, sequentially
 
-	fmt.Println("\n--- Throughput Comparison ---")
-	fmt.Printf("Total time for DAG:        %.2fs (%d rounds x %d ms)\n", totalTimeDAG, totalRounds, roundTimeMs)
-	fmt.Printf("Total time for pBFT:        %.2fs (%d rounds x %d validators x %d ms)\n", totalTimepBFT, totalRounds, n, roundTimeMs)
-	fmt.Printf("DAG throughput:    %.0f blocks/s (%d blocks total)\n", dagThroughput, numBlocks)
-	fmt.Printf("pBFT throughput:   %.0f blocks/s (%d blocks total)\n", pbftThroughput, numBlocks)
-	fmt.Printf("DAG speedup:       %.1fx\n", dagThroughput/pbftThroughput)
+    fmt.Println("\n--- Throughput Comparison ---")
+    fmt.Printf("Elapsed time:         %.2fs (%d rounds x %d ms)\n", totalTimeS, totalRounds, roundTimeMs)
+    fmt.Printf("DAG throughput:       %.0f blocks/s (%d blocks proposed)\n", dagThroughput, proposed)
+    fmt.Printf("pBFT throughput:      %.0f blocks/s (%d blocks, one per round)\n", pbftThroughput, totalRounds)
+    fmt.Printf("DAG speedup:          %.1fx\n", dagThroughput/pbftThroughput)
 }
