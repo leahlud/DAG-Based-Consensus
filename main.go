@@ -45,10 +45,10 @@ func main() {
 	startValidators(ctx, validators)
 
 	// start the consensus simulation
-	proposed := runSimulation(validators, *totalRounds, *roundTimeMs, *proposeProb)
+	runSimulation(validators, *totalRounds, *roundTimeMs, *proposeProb)
 
 	exportTotalOrdering(validators, *totalRounds)
-	printThroughputComparison(proposed, *totalRounds, *roundTimeMs, len(validators))
+	printThroughputComparison(validators, *totalRounds, *roundTimeMs)
 }
 
 func randomFaultySet() map[int]bool {
@@ -139,15 +139,27 @@ func exportTotalOrdering(validators []*simulation.Validator, totalRounds int) {
 }
 
 
-func printThroughputComparison(proposed, totalRounds, roundTimeMs, n int) {
+func printThroughputComparison(validators []*simulation.Validator, totalRounds, roundTimeMs int) {
     totalTimeS := float64(totalRounds*roundTimeMs) / 1000.0
 
-    dagThroughput  := float64(proposed) / totalTimeS
-    pbftThroughput := float64(totalRounds) / totalTimeS  // one block per round, sequentially
+    // count actually certified blocks from V0's DAG
+    dag := validators[0].GetDAG()
+    certified := 0
+    for round := 1; round <= totalRounds; round++ {
+        certified += dag.CountAtRound(round)
+    }
+
+    // pBFT: one leader per round, so at most totalRounds blocks committed
+    // scale by the same certification rate to be fair
+    certRate := float64(certified) / float64(totalRounds*len(validators))
+    pbftCommitted := int(float64(totalRounds) * certRate)
+
+    dagThroughput  := float64(certified) / totalTimeS
+    pbftThroughput := float64(pbftCommitted) / totalTimeS
 
     fmt.Println("\n--- Throughput Comparison ---")
-    fmt.Printf("Elapsed time:         %.2fs (%d rounds x %d ms)\n", totalTimeS, totalRounds, roundTimeMs)
-    fmt.Printf("DAG throughput:       %.0f blocks/s (%d blocks proposed)\n", dagThroughput, proposed)
-    fmt.Printf("pBFT throughput:      %.0f blocks/s (%d blocks, one per round)\n", pbftThroughput, totalRounds)
-    fmt.Printf("DAG speedup:          %.1fx\n", dagThroughput/pbftThroughput)
+    fmt.Printf("Elapsed time:     %.2fs (%d rounds x %d ms)\n", totalTimeS, totalRounds, roundTimeMs)
+    fmt.Printf("DAG throughput:   %.0f blocks/s (%d blocks certified)\n", dagThroughput, certified)
+    fmt.Printf("pBFT throughput:  %.0f blocks/s (%d blocks, one leader/round)\n", pbftThroughput, pbftCommitted)
+    fmt.Printf("DAG speedup:      %.1fx\n", dagThroughput/pbftThroughput)
 }
