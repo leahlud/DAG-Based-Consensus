@@ -120,7 +120,6 @@ func exportTotalOrdering(validators []*simulation.Validator, totalRounds int) {
 	for id := range rejectedSet {
 		rejectedList = append(rejectedList, id)
 	}
-	export.WriteRejectedCSV(rejectedList, "rejected.csv")
 
 	fmt.Println("\n--- Total Order (V0) ---")
 	order := simulation.TotalOrder(validators[0].GetDAG())
@@ -131,9 +130,10 @@ func exportTotalOrdering(validators []*simulation.Validator, totalRounds int) {
 
 	// export to CSV
 	blocks := validators[0].ExportDAG()
-	export.WriteEdgesCSV(blocks, "edges.csv")
-	export.WriteOrderCSV(orderStrings, "order.csv")
-	export.WriteByzantineCSV(records, "byzantine.csv")
+	export.WriteEdgesCSV(blocks, "csvs/edges.csv")
+	export.WriteOrderCSV(orderStrings, "csvs/order.csv")
+	export.WriteByzantineCSV(records, "csvs/byzantine.csv")
+	export.WriteRejectedCSV(rejectedList, "csvs/rejected.csv")
 	fmt.Println("\nExported to edges.csv, order.csv, byzantine.csv, and rejected.csv")
 
 }

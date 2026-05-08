@@ -32,10 +32,10 @@ F      = args.f
 QUORUM = 2 * F + 1
 
 # --- load data ---
-edges_df = pd.read_csv("edges.csv")
-order_df = pd.read_csv("order.csv")
-byz_df   = pd.read_csv("byzantine.csv")
-rejected_df = pd.read_csv("rejected.csv")
+edges_df = pd.read_csv("csvs/edges.csv")
+order_df = pd.read_csv("csvs/order.csv")
+byz_df   = pd.read_csv("csvs/byzantine.csv")
+rejected_df = pd.read_csv("csvs/rejected.csv")
 
 # --- parsing ---
 def parse_block_name(name):
